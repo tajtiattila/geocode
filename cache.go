@@ -1,4 +1,4 @@
-package geoc
+package geocode
 
 import (
 	"encoding/json"
@@ -6,21 +6,23 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-// geocoder is a caching geocoder
-type Cached struct {
+type cached struct {
 	db *leveldb.DB
 	gc Geocoder
 }
 
-func NewCached(gc Geocoder, cachepath string) (*Cached, error) {
+// NewCached returns a geocoder that caches results from gc.
+//
+// The cache is stored at cachepath.
+func NewCached(gc Geocoder, cachepath string) (Geocoder, error) {
 	db, err := leveldb.OpenFile(cachepath, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &Cached{db, gc}, nil
+	return &cached{db, gc}, nil
 }
 
-func (g *Cached) Close() error {
+func (g *cached) Close() error {
 	err1 := g.db.Close()
 	err2 := g.gc.Close()
 	if err1 != nil {
@@ -29,7 +31,7 @@ func (g *Cached) Close() error {
 	return err2
 }
 
-func (g *Cached) Geocode(a string) (lat, long float64, err error) {
+func (g *cached) Geocode(a string) (lat, long float64, err error) {
 	type cacheEnt struct {
 		Lat  float64
 		Long float64

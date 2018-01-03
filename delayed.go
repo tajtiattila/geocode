@@ -1,26 +1,27 @@
-package geoc
+package geocode
 
 import (
 	"time"
 )
 
-// Delayed is a geocoder that limits outgoing requests
-// based on a time.Duration
-type Delayed struct {
+type delayed struct {
 	gc     Geocoder
 	ticker *time.Ticker
 }
 
+// NewDelayed delays requests sent to gc.
+//
+// It ensures requests are at least d apart.
 func NewDelayed(gc Geocoder, d time.Duration) Geocoder {
-	return &Delayed{gc, time.NewTicker(d)}
+	return &delayed{gc, time.NewTicker(d)}
 }
 
-func (d *Delayed) Geocode(query string) (lat, long float64, err error) {
+func (d *delayed) Geocode(query string) (lat, long float64, err error) {
 	<-d.ticker.C
 	return d.gc.Geocode(query)
 }
 
-func (d *Delayed) Close() error {
+func (d *delayed) Close() error {
 	d.ticker.Stop()
-	return nil
+	return d.gc.Close()
 }
