@@ -2,8 +2,8 @@ package geocode
 
 import "github.com/kellydunn/golang-geo"
 
-// NewGeoGeocoder returns a Geocoder using gc as its source.
-func NewGeoGeocoder(gc geo.Geocoder) Geocoder {
+// Geo returns a Geocoder using gc as its source.
+func Geo(gc geo.Geocoder) Geocoder {
 	return &geoGeocoder{gc}
 }
 

@@ -1,30 +1,40 @@
 package geocode
 
-import (
-	"encoding/json"
+import "errors"
 
-	"github.com/syndtr/goleveldb/leveldb"
-)
+// QueryCache caches geocode results.
+type QueryCache interface {
+	Load(query string) (lat, long float64, err error)
+	Store(query string, lat, long float64, err error) error
 
-type cached struct {
-	db *leveldb.DB
-	gc Geocoder
+	Close() error
 }
 
-// NewCached returns a geocoder that caches results from gc.
+// ErrCacheMiss is returned by Cache.Load when
+// a query string is not cached yet.
+var ErrCacheMiss = errors.New("cache miss")
+
+type cacheEntry struct {
+	Lat  float64
+	Long float64
+	Err  error `json:",omitempty"`
+}
+
+// Cache returns a geocoder that caches results from gc.
 //
-// The cache is stored at cachepath.
-func NewCached(gc Geocoder, cachepath string) (Geocoder, error) {
-	db, err := leveldb.OpenFile(cachepath, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &cached{db, gc}, nil
+// The cache is stored at path.
+func Cache(gc Geocoder, qc QueryCache) Geocoder {
+	return &cached{gc, qc}
+}
+
+type cached struct {
+	gc Geocoder
+	qc QueryCache
 }
 
 func (g *cached) Close() error {
-	err1 := g.db.Close()
-	err2 := g.gc.Close()
+	err1 := g.gc.Close()
+	err2 := g.qc.Close()
 	if err1 != nil {
 		return err1
 	}
@@ -32,33 +42,12 @@ func (g *cached) Close() error {
 }
 
 func (g *cached) Geocode(a string) (lat, long float64, err error) {
-	type cacheEnt struct {
-		Lat  float64
-		Long float64
-		Err  error `json:",omitempty"`
+	lat, long, err = g.qc.Load(a)
+	if err != ErrCacheMiss {
+		return lat, long, err
 	}
 
-	data, err := g.db.Get([]byte(a), nil)
-	switch {
-	case err == nil:
-		var ce cacheEnt
-		if err = json.Unmarshal(data, &ce); err == nil {
-			return ce.Lat, ce.Long, ce.Err
-		}
-		reportError("unmarshal", err)
-	case err != leveldb.ErrNotFound:
-		reportError("leveldb get", err)
-	}
-
-	lat, long, geoerr := g.gc.Geocode(a)
-
-	data, err = json.Marshal(cacheEnt{lat, long, geoerr})
-	if err != nil {
-		panic("impossible")
-	}
-	if err = g.db.Put([]byte(a), data, nil); err != nil {
-		reportError("leveldb put", err)
-	}
-
-	return lat, long, geoerr
+	lat, long, err = g.gc.Geocode(a)
+	g.qc.Store(a, lat, long, err)
+	return lat, long, err
 }

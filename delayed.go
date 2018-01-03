@@ -9,10 +9,10 @@ type delayed struct {
 	ticker *time.Ticker
 }
 
-// NewDelayed delays requests sent to gc.
+// Delay returns a Geocoder that delays requests sent to gc.
 //
 // It ensures requests are at least d apart.
-func NewDelayed(gc Geocoder, d time.Duration) Geocoder {
+func Delay(gc Geocoder, d time.Duration) Geocoder {
 	return &delayed{gc, time.NewTicker(d)}
 }
 
