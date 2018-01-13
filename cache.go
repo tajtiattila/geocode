@@ -4,8 +4,8 @@ import "errors"
 
 // QueryCache caches geocode results.
 type QueryCache interface {
-	Load(query string) (lat, long float64, err error)
-	Store(query string, lat, long float64, err error) error
+	Load(query string) (Result, error)
+	Store(query string, res Result, err error) error
 
 	Close() error
 }
@@ -15,14 +15,11 @@ type QueryCache interface {
 var ErrCacheMiss = errors.New("cache miss")
 
 type cacheEntry struct {
-	Lat  float64
-	Long float64
-	Err  error `json:",omitempty"`
+	Res Result `json:"result"`
+	Err error  `json:",omitempty"`
 }
 
 // Cache returns a geocoder that caches results from gc.
-//
-// The cache is stored at path.
 func Cache(gc Geocoder, qc QueryCache) Geocoder {
 	return &cached{gc, qc}
 }
@@ -41,13 +38,13 @@ func (g *cached) Close() error {
 	return err2
 }
 
-func (g *cached) Geocode(a string) (lat, long float64, err error) {
-	lat, long, err = g.qc.Load(a)
+func (g *cached) Geocode(a string) (Result, error) {
+	r, err := g.qc.Load(a)
 	if err != ErrCacheMiss {
-		return lat, long, err
+		return r, err
 	}
 
-	lat, long, err = g.gc.Geocode(a)
-	g.qc.Store(a, lat, long, err)
-	return lat, long, err
+	r, err = g.gc.Geocode(a)
+	g.qc.Store(a, r, err)
+	return r, err
 }

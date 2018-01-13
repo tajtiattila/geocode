@@ -25,25 +25,23 @@ func (o *olcCoder) Close() error {
 	return o.gc.Close()
 }
 
-func (o *olcCoder) Geocode(a string) (lat, long float64, err error) {
+func (o *olcCoder) Geocode(a string) (Result, error) {
 	code, ref, ok := splitCode(a)
 	if ok {
 		if ref != "" {
-			rlat, rlong, err := o.gc.Geocode(ref)
+			res, err := o.gc.Geocode(ref)
 			if err != nil {
-				return rlat, rlong, err
+				return res, err
 			}
 
-			code, err = olc.RecoverNearest(code, rlat, rlong)
+			code, err = olc.RecoverNearest(code, res.Lat, res.Long)
 		}
 
 		ca, err := olc.Decode(code)
 		if err != nil {
-			return 0, 0, err
+			return Result{}, err
 		}
-		lat = (ca.LatLo + ca.LatHi) / 2
-		long = (ca.LngLo + ca.LngHi) / 2
-		return lat, long, nil
+		return rectResult(ca.LatHi, ca.LngHi, ca.LatLo, ca.LngLo), nil
 	}
 
 	return o.gc.Geocode(a)

@@ -14,13 +14,14 @@ type latLongCoder struct {
 	gc Geocoder
 }
 
-func (ll *latLongCoder) Geocode(a string) (lat, long float64, err error) {
+func (ll *latLongCoder) Geocode(a string) (Result, error) {
+	var lat, long float64
 	var rest string
-	if _, err := fmt.Sscanf(a, "%f,%f%s", &lat, &long, &rest); err == nil && rest == "" {
-		return lat, long, nil
+	if n, _ := fmt.Sscanf(a, "%f,%f%s", &lat, &long, &rest); n == 2 {
+		return pointResult(lat, long), nil
 	}
 	if ll.gc == nil {
-		return 0, 0, fmt.Errorf("unrecognized lat/long %q", a)
+		return Result{}, fmt.Errorf("unrecognized lat/long %q", a)
 	}
 	return ll.gc.Geocode(a)
 }

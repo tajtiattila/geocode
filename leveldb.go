@@ -19,13 +19,13 @@ func LevelDB(path string) (QueryCache, error) {
 	return &levelDB{db}, nil
 }
 
-func (l *levelDB) Load(query string) (lat, long float64, err error) {
+func (l *levelDB) Load(query string) (Result, error) {
 	data, err := l.db.Get([]byte(query), nil)
 	switch {
 	case err == nil:
 		var ce cacheEntry
 		if err = json.Unmarshal(data, &ce); err == nil {
-			return ce.Lat, ce.Long, ce.Err
+			return ce.Res, ce.Err
 		}
 		reportError("unmarshal", err)
 	case err == leveldb.ErrNotFound:
@@ -33,11 +33,11 @@ func (l *levelDB) Load(query string) (lat, long float64, err error) {
 	default:
 		reportError("leveldb get", err)
 	}
-	return 0, 0, ErrCacheMiss
+	return Result{}, ErrCacheMiss
 }
 
-func (l *levelDB) Store(query string, lat, long float64, err error) error {
-	data, err := json.Marshal(cacheEntry{lat, long, err})
+func (l *levelDB) Store(query string, res Result, err error) error {
+	data, err := json.Marshal(cacheEntry{res, err})
 	if err != nil {
 		panic("impossible")
 	}

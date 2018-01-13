@@ -7,15 +7,15 @@ func Memory() QueryCache {
 	return make(mem)
 }
 
-func (m mem) Load(query string) (lat, long float64, err error) {
+func (m mem) Load(query string) (Result, error) {
 	if e, ok := m[query]; ok {
-		return e.Lat, e.Long, nil
+		return e.Res, nil
 	}
-	return 0, 0, ErrCacheMiss
+	return Result{}, ErrCacheMiss
 }
 
-func (m mem) Store(query string, lat, long float64, err error) error {
-	m[query] = cacheEntry{lat, long, err}
+func (m mem) Store(query string, res Result, err error) error {
+	m[query] = cacheEntry{res, err}
 	return nil
 }
 

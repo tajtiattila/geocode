@@ -13,10 +13,13 @@ type delayed struct {
 //
 // It ensures requests are at least d apart.
 func Delay(gc Geocoder, d time.Duration) Geocoder {
+	if d <= 0 {
+		return gc
+	}
 	return &delayed{gc, time.NewTicker(d)}
 }
 
-func (d *delayed) Geocode(query string) (lat, long float64, err error) {
+func (d *delayed) Geocode(query string) (Result, error) {
 	<-d.ticker.C
 	return d.gc.Geocode(query)
 }
