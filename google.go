@@ -85,22 +85,26 @@ type googleLocation struct {
 }
 
 func decodeGoogleResponse(r io.Reader) (Result, error) {
-	// logic from perkeep.org/internal/geocode/geocode.go
+	// logic partially from perkeep.org/internal/geocode/geocode.go
 	var resTop googleResTop
 	if err := json.NewDecoder(r).Decode(&resTop); err != nil {
 		return Result{}, err
 	}
 
 	for _, res := range resTop.Results {
-		if res.Geometry != nil && res.Geometry.Bounds != nil {
-			r := res.Geometry.Bounds
-			if r.NE.Lat == 90 && r.NE.Long == 180 &&
-				r.SW.Lat == -90 && r.SW.Long == -180 {
-				// Google sometimes returns a "whole world" rect for large addresses (like "USA")
-				// so instead use the viewport in that case.
-				return googleRes(res.Geometry.Location, *res.Geometry.Viewport)
-			} else {
-				return googleRes(res.Geometry.Location, *r)
+		if res.Geometry != nil {
+			if r := res.Geometry.Bounds; r != nil {
+				if r.NE.Lat == 90 && r.NE.Long == 180 &&
+					r.SW.Lat == -90 && r.SW.Long == -180 {
+					// Google sometimes returns a "whole world" rect for large addresses (like "USA")
+					// so instead use the viewport in that case.
+					return googleRes(res.Geometry.Location, *res.Geometry.Viewport)
+				} else {
+					return googleRes(res.Geometry.Location, *r)
+				}
+			} else if l := res.Geometry.Location; l != nil {
+				// no bounds
+				return pointResult(l.Lat, l.Long), nil
 			}
 		}
 	}
