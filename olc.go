@@ -51,7 +51,7 @@ func splitCode(query string) (code, ref string, ok bool) {
 	query = trim(query)
 
 	if olc.CheckFull(query) == nil {
-		return code, "", true
+		return query, "", true
 	}
 
 	// check for code at beginning, eg.
